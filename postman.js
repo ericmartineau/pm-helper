@@ -143,7 +143,19 @@ var _ = require('lodash');
         _.assign(_postman, mixin);
     }
 
+    scope.myPostman = _postman;
+
     return function(callback) {
-        callback.apply(scope, [_postman]);
+        if(typeof callback === 'function') {
+            callback.apply(scope, [_postman]);
+        } else if(callback instanceof Array) {
+            _postman.requireVars(callback);
+        } else if(typeof callback === 'string') {
+            _postman.requireVars(callback);
+        } else {
+            throw {'message': 'Unknown type passed, must be function, array, or string'}
+        }
+
+
     };
 })(this, request, globals, environment);
