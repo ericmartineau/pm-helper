@@ -143,9 +143,7 @@ var _ = require('lodash');
         _.assign(_postman, mixin);
     }
 
-    scope.myPostman = _postman;
-
-    return function(callback) {
+    return scope.myPostman = function(callback) {
         if(typeof callback === 'function') {
             callback.apply(scope, [_postman]);
         } else if(callback instanceof Array) {
