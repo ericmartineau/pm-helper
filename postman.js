@@ -1,4 +1,5 @@
 var _ = require('lodash');
+var myPostman;
 
 (function(scope, rq, gl, evs) {
     'use strict';
@@ -49,7 +50,9 @@ var _ = require('lodash');
         __scriptDeps(_request.id, n);
         n.forEach(function(reqVar) {
             if (!_envs[reqVar]) {
-                throw { message: 'Missing env variable \'' + reqVar + '\'.  Set it manually, or run one of: ' + __list(PROVIDERS, reqVar)};
+                const providers = __list(PROVIDERS, reqVar) || [];
+                const msg = providers.length > 0 ? "Set it manually, or run one of:: " + providers : "Please set it manually";
+                throw { message: 'Missing env variable \'' + reqVar + '\'.  ' + msg };
             }
         });
     }
@@ -143,7 +146,7 @@ var _ = require('lodash');
         _.assign(_postman, mixin);
     }
 
-    scope.myPostman = function(callback) {
+    myPostman = function(callback) {
         if(typeof callback === 'function') {
             callback.apply(scope, [_postman]);
         } else if(callback instanceof Array) {
@@ -155,5 +158,5 @@ var _ = require('lodash');
         }
     };
 
-    return scope.myPostman;
+    return myPostman;
 })(this, request, globals, environment);
