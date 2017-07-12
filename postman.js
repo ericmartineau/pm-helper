@@ -9,7 +9,7 @@ var _ = require('lodash');
 
     if (!scope.postman) {
         throw { message: 'No valid postman instance found' };
-    } else if (scope.postman.myPostman && scope.postman.myPostman()) {
+    } else if (scope.postman.oldPostman && scope.postman.oldPostman()) {
         throw { message: 'Already been created' };
     } else {
         _postman = scope.postman;
@@ -25,7 +25,7 @@ var _ = require('lodash');
     const PROVIDES = 'provides:';
     const PROVIDERS = 'providers:';
 
-    function myPostman() {
+    function oldPostman() {
         return _postman;
     }
 
@@ -132,7 +132,7 @@ var _ = require('lodash');
 
     const mixin = {
         _priorSetEnvironmentVariable: _postman.setEnvironmentVariable,
-        myPostman: myPostman,
+        oldPostman: oldPostman,
         requireVars: requireVars,
         setEnvironmentVariable: setEnvironmentVariable,
         verifyHelper: verifyHelper,
