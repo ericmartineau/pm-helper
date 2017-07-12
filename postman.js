@@ -1,125 +1,149 @@
 var _ = require('lodash');
 
-/**
- *
- */
-const _postman = postman;
-const _request = request;
-const _globals = globals;
-const _envs = environment;
+(function(scope, rq, gl, evs) {
+    'use strict';
 
-const _pm = _.assign({}, _postman);
-_pm.setEnvironmentVariable = function(name, val) {
-    // Register this property as one to clean on any dependents
-    _postman.setEnvironmentVariable(name, val);
-    this.__providerOf(name);
-    this.__clearDeps(name);
-};
+    var ctx;
 
-const CTXKEY = '__pmh:data';
-const MAPS = 'maps';
-const TOCX = 'toclear:';
-const SCRIPTDEPS = 'scriptdeps';
-const PROVIDER = 'provider:';
-var pmhCtx;
+    var _postman;
 
+    if (!scope.postman) {
+        throw { message: 'No valid postman instance found' };
+    } else if (scope.postman.myPostman && scope.postman.myPostman()) {
+        throw { message: 'Already been created' };
+    } else {
+        _postman = scope.postman;
+    }
 
-_pm.verifyHelper = function(parent, child) {
-    tests['Should have set child'] = _envs[child];
+    const _request = rq;
+    const _envs = evs;
 
-    this.setEnvironmentVariable(parent, 'New Val');
-    return tests['Should have cleared child'] = !_envs[child];
-};
+    const CTXKEY = '__pmh:data';
+    const MAPS = 'maps';
+    const TOCX = 'toclear:';
+    const SCRIPTDEPS = 'scriptdeps';
+    const PROVIDES = 'provides:';
+    const PROVIDERS = 'providers:';
 
-_pm.requireVars = function(n) {
-    n = n instanceof Array ? n : [n];
+    function myPostman() {
+        return _postman;
+    }
 
-    this.__scriptDeps(_request.id, n);
-    n.forEach(function(reqVar) {
-        if (!_envs[reqVar]) {
-            throw { message: 'Missing env variable \'' + n + '\'.  Set it manually, or run one of: ' };
-        }
-    });
+    function setEnvironmentVariable(name, val) {
+        // Register this property as one to clean on any dependents
+        _postman._priorSetEnvironmentVariable(name, val);
+        __providerOf(name);
+        __clearDeps(name);
+    }
 
-};
+    function verifyHelper(parent, child) {
+        tests['Should have set child'] = _envs[child];
 
-_pm.clearHelperVariables = function() {
-    _postman.clearGlobalVariable(CTXKEY);
-};
+        this.setEnvironmentVariable(parent, 'New Val');
+        return tests['Should have cleared child'] = !_envs[child];
+    }
 
-////// PRIVATES
+    function requireVars(n) {
+        n = n instanceof Array ? n : [n];
 
-_pm.__providerOf = function(prop) {
-    console.log('Adding "' + _request.name + '" as provider of ' + prop);
-    this.__list(_request.id, PROVIDER, [prop]);
-
-    // Registering variable clearer.  Find my dependencies and tell them to remove my props
-    // when they are cleared.
-    const dependsOn = this.__scriptDeps(_request.id);
-    const self = this;
-    if (dependsOn) {
-        dependsOn.forEach(function(dependency) {
-            self.__list(TOCX, dependency, [prop]);
+        __scriptDeps(_request.id, n);
+        n.forEach(function(reqVar) {
+            if (!_envs[reqVar]) {
+                throw { message: 'Missing env variable \'' + reqVar + '\'.  Set it manually, or run one of: ' + __list(PROVIDERS, reqVar)};
+            }
         });
     }
-};
 
-_pm.isHelping = function() {
-    return true;
-};
-
-_pm.__save = function() {
-    console.log(this.__ctx());
-    _postman.setGlobalVariable(CTXKEY, JSON.stringify(this.__ctx()));
-};
-
-_pm.__ctx = function(prop) {
-    pmhCtx = pmhCtx || JSON.parse(_postman.getGlobalVariable(CTXKEY) || "{}");
-    if (prop) return pmhCtx[prop] = pmhCtx[prop] || {};
-    else return pmhCtx;
-};
-
-_pm.__scriptDeps = function(scriptId, deps) {
-    const allDeps = this.__ctx(SCRIPTDEPS);
-    if (scriptId && deps) {
-        allDeps[scriptId] = deps;
-        this.__save();
+    function clearHelperVariables() {
+        _postman.clearGlobalVariable(CTXKEY);
     }
-    else if (scriptId) return allDeps[scriptId];
-    else return allDeps;
-};
 
-_pm.__clearDeps = function(prop, done) {
-    if(!done) done=[];
-    var cxlist = this.__list(TOCX, prop);
-    cxlist.forEach(this.__cxvar(prop));
+    ////// PRIVATE STUFF
 
-    if(_.difference(done, cxlist).length > 0) {
-        done = _.union(done, cxlist);
-        cxlist.forEach(function(cx) { this.__clearDeps(cx, done); })
+    function __providerOf(prop) {
+        console.log('Adding "' + _request.name + '" as provider of ' + prop);
+        __list(PROVIDES, _request.id, [prop]);
+        __list(PROVIDERS, prop, [_request.name]);
+
+        // Registering variable deleter.  Find my dependencies and tell them to remove my props
+        // when they are cleared.
+        const dependsOn = __scriptDeps(_request.id);
+        if (dependsOn) {
+            dependsOn.forEach(function(dependency) {
+                __list(TOCX, dependency, [prop]);
+            });
+        }
     }
-};
 
-_pm.__cxvar = function(p) {
-    return function(v) {
-        console.log('Clearing var ' + v + ' because parent ' + p + ' was updated');
-        tests['Clearing var ' + v + ' because parent ' + p + ' was updated'] = true;
-        _postman.clearEnvironmentVariable(v);
+    function __save() {
+        console.log(__ctx());
+        _postman.setGlobalVariable(CTXKEY, JSON.stringify(__ctx()));
     }
-};
 
+    function __ctx(prop) {
+        ctx = ctx || JSON.parse(_postman.getGlobalVariable(CTXKEY) || '{}');
+        if (prop) return ctx[prop] = ctx[prop] || {};
+        else return ctx;
+    }
 
-_pm.__list = function(type, prop, append) {
-    const key = this.__key(type, prop);
-    const list = _.union(this.__ctx(MAPS)[key] || [], append);
+    function __scriptDeps(scriptId, deps) {
+        const allDeps = __ctx(SCRIPTDEPS);
+        if (scriptId && deps) {
+            allDeps[scriptId] = deps;
+            __save();
+        }
+        else if (scriptId) return allDeps[scriptId];
+        else return allDeps;
+    }
 
-    this.__ctx(MAPS)[key] = _.without(_.uniq(list), prop);
-    if (append) this.__save();
-    return list;
-};
+    function __clearDeps(prop, done) {
+        if (!done) done = [];
+        var cxlist = __list(TOCX, prop);
+        cxlist.forEach(__cxvar(prop));
 
-_pm.__key = function(type, prop) {
-    return CTXKEY + type + prop;
-};
+        if (_.difference(done, cxlist).length > 0) {
+            done = _.union(done, cxlist);
+            cxlist.forEach(function(cx) {
+                __clearDeps(cx, done);
+            })
+        }
+    }
 
-_pm;
+    function __cxvar(p) {
+        return function(v) {
+            console.log('Clearing var ' + v + ' because parent ' + p + ' was updated');
+            tests['Clearing var ' + v + ' because parent ' + p + ' was updated'] = true;
+            _postman.clearEnvironmentVariable(v);
+        }
+    }
+
+    function __list(type, prop, append) {
+        const key = __key(type, prop);
+        const list = _.union(__ctx(MAPS)[key] || [], append);
+
+        __ctx(MAPS)[key] = _.without(_.uniq(list), prop);
+        if (append) __save();
+        return list;
+    }
+
+    function __key(type, prop) {
+        return type + prop;
+    }
+
+    const mixin = {
+        _priorSetEnvironmentVariable: _postman.setEnvironmentVariable,
+        myPostman: myPostman,
+        requireVars: requireVars,
+        setEnvironmentVariable: setEnvironmentVariable,
+        verifyHelper: verifyHelper,
+        clearHelperVariables: clearHelperVariables
+    };
+
+    if(!_postman._priorSetEnvironmentVariable) {
+        _.assign(_postman, mixin);
+    }
+
+    return function(callback) {
+        callback.apply(scope, [_postman]);
+    };
+})(this, request, globals, environment);
